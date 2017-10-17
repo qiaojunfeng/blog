@@ -148,9 +148,59 @@ ImportError: /lib/libc.so.6: version `GLIBC_2.14' not found (required by /home/q
     不清楚为什么，有时候`-O2`默认优化选项会产生莫名其妙的问题，改成`-O0`问题消失。
 
 ## 8. 安装glibc-2.26.tar.xz
+  继续出现错误。。。
+  ```
+  checking installed Linux kernel header files... missing or too old!
+  configure: error: GNU libc requires kernel header files from
+  Linux 3.2.0 or later to be installed before configuring.
+  The kernel header files are found usually in /usr/include/asm and
+  /usr/include/linux; make sure these directories use files from
+  Linux 3.2.0 or later.  This check uses <linux/version.h>, so
+  make sure that file was built correctly when installing the kernel header
+  files.  To use kernel headers not from /usr/include/linux, use the
+  configure option --with-headers.
+  ```
+  看来是linux kernel版本太低了。2.6.32版本太老了。。
+  ```
+  uname -a
+  Linux ln3 2.6.32-358.11.1.2.ky3.1.x86_64 #1 SMP Mon Jul 8 13:05:58 CST 2013 x86_64 x86_64 x86_64 GNU/Linux
+  ```
+  准备弃坑了，再编译个内核太麻烦了。
+  似乎编译了glibc后，虽然可以通过`LD_LIBRARY_PATH`来使链接到新版本的glibc，但是
 
+  ```
+  ldd ~/qiao/bin/anaconda/lib/python3.6/site-packages/pymatgen-2017.10.16-py3.6-linux-x86_64.egg/pymatgen/util/coord_cython.cpython-36m-x86_64-linux-gnu.so
+        linux-vdso.so.1 =>  (0x00007fffcd5b9000)
+        /usr/local/lib/libthbm.so (0x00002b1c6a73e000)
+        libpython3.6m.so.1.0 => /home/qiao/bin/anaconda/lib/libpython3.6m.so.1.0 (0x00002b1c6a94b000)
+        libpthread.so.0 => /lib64/libpthread.so.0 (0x00002b1c6aea1000)
+        libc.so.6 => /lib/libc.so.6 (0x00002b1c6b0bf000)
+        libdl.so.2 => /lib64/libdl.so.2 (0x00002b1c6b452000)
+        libutil.so.1 => /lib64/libutil.so.1 (0x00002b1c6b656000)
+        librt.so.1 => /lib64/librt.so.1 (0x00002b1c6b85a000)
+        libm.so.6 => /lib/libm.so.6 (0x00002b1c6ba62000)
+        /lib64/ld-linux-x86-64.so.2 (0x000000323ae00000)
+  ```
+  可见`ld-linux.so.2`是直接hard-coded到.so里面的。
+  所以当有多个glibc的时候，需要用其他办法将`ld-linux.so.2`换成新的版本。
+  方法有`chroot`，但是我没有root权限，所以不行。还有`fakechroot`，`proot`等似乎可行。
+  除此之外，还有环境变量`LD_PRELOAD`
+  参考[https://stackoverflow.com/questions/847179/multiple-glibc-libraries-on-a-single-host]
+  个人觉得最好的办法就是`patchelf`了，不过都没有尝试。因为，我发现，达成我的目的，其实有更加简单的方法。。。。
 
-## 9. 附录
+## 9. 最终的解决办法
+  与其费事费力编译gcc、glibc，为何不直接重新编译pymatgen？
+  github上下载最新的release，卸载掉旧的pymatgen，之后编译安装
+  ```
+  conda remove pymatgen
+  tar xvf pymatgen-2017.10.16.tar.gz
+  cd pymatgen-2017.10.16
+  python setup.py install
+  ```
+  再import pymatgen，没有报错，<font color=red>问题就这么解决了。。。。。。</font>
+
+## 10. 附录
+  最主要的是看各种manual的installation部分，总会有解决办法的。
   1. Installing GCC [https://gcc.gnu.org/install/]
 
 
